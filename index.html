@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rat Furniture</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="header">
+        <h1 class="brand">Rat Furniture</h1>
+        <div class="mode-badge">Admin Mode</div>
+    </header>
+
+    <div class="container">
+        <div id="product-grid" class="grid">
+            <div class="loading-spinner">Loading Collection...</div>
+        </div>
+    </div>
+
+    <button class="fab" onclick="addProduct()">+</button>
+
+    <div class="footer-lock" onclick="toggleAdminMode()">
+        <span id="lock-icon">🔒 Admin Access</span>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        // --- ⬇️ PASTE YOUR NEW CONFIG HERE ⬇️ ---
+        const firebaseConfig = {
+            apiKey: "PASTE_HERE",
+            authDomain: "PASTE_HERE",
+            projectId: "PASTE_HERE",
+            storageBucket: "PASTE_HERE",
+            messagingSenderId: "PASTE_HERE",
+            appId: "PASTE_HERE"
+        };
+        // ----------------------------------------
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+        const docRef = doc(db, "catalog", "main");
+
+        // State
+        let products = [];
+        let isAdmin = false;
+        const PASSKEY = "29876104";
+
+        // 1. Listen for Realtime Updates
+        onSnapshot(docRef, (snap) => {
+            if (snap.exists()) {
+                products = snap.data().products || [];
+                renderApp();
+            } else {
+                // Initialize if empty
+                products = [{ name: "Modern Chair", price: "120", img: "" }];
+                saveData();
+            }
+        });
+
+        // 2. Render the UI
+        function renderApp() {
+            const grid = document.getElementById("product-grid");
+            const lockIcon = document.getElementById("lock-icon");
+            
+            grid.innerHTML = "";
+            document.body.classList.toggle('admin-active', isAdmin);
+            lockIcon.innerText = isAdmin ? "Tap to Exit Admin" : "🔒 Admin Access";
+
+            if (products.length === 0) {
+                grid.innerHTML = '<div class="loading-spinner">No items found.</div>';
+                return;
+            }
+
+            products.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                // Fallback image if empty
+                const imgSrc = item.img ? item.img : 'https://placehold.co/400x400/F0F0F0/CCCCCC?text=No+Image';
+
+                card.innerHTML = `
+                    <div class="image-box">
+                        <img src="${imgSrc}" id="preview-${index}" loading="lazy">
+                    </div>
+                    
+                    <div class="details">
+                        <div class="price-tag">$${item.price}</div>
+                        <div class="item-name">${item.name}</div>
+                        <a href="https://wa.me/?text=I'm interested in ${encodeURIComponent(item.name)}" 
+                           class="btn-buy" target="_blank">Order Now</a>
+
+                        <div class="admin-ui">
+                            <input class="edit-input" id="name-${index}" value="${item.name}" placeholder="Name">
+                            <input class="edit-input" id="price-${index}" value="${item.price}" placeholder="Price">
+                            
+                            <label class="upload-label" id="lbl-${index}">
+                                📷 Change Photo
+                                <input type="file" class="hidden-file" accept="image/*" onchange="handleUpload(this, ${index})">
+                            </label>
+                            
+                            <div class="actions-row">
+                                <button class="btn-action btn-save" id="save-${index}" onclick="saveItem(${index})">Save</button>
+                                <button class="btn-action btn-del" onclick="deleteItem(${index})">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 3. Logic Functions
+        window.handleUpload = async (input, index) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const label = document.getElementById(`lbl-${index}`);
+            const saveBtn = document.getElementById(`save-${index}`);
+            
+            label.innerText = "Uploading... ⏳";
+            saveBtn.disabled = true;
+
+            try {
+                const storageRef = ref(storage, 'catalog/' + Date.now() + '-' + file.name);
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+                
+                // Update local data temporarily for preview
+                products[index].img = url;
+                document.getElementById(`preview-${index}`).src = url;
+                
+                label.innerText = "✅ Done";
+            } catch (error) {
+                console.error(error);
+                label.innerText = "❌ Error";
+            } finally {
+                saveBtn.disabled = false;
+            }
+        };
+
+        window.saveItem = async (index) => {
+            // Update data from inputs
+            products[index].name = document.getElementById(`name-${index}`).value;
+            products[index].price = document.getElementById(`price-${index}`).value;
+            // Image is already updated in local array by handleUpload
+            
+            const btn = document.getElementById(`save-${index}`);
+            btn.innerText = "Saving...";
+            
+            await saveData();
+            
+            btn.innerText = "Saved!";
+            setTimeout(() => btn.innerText = "Save", 1500);
+        };
+
+        window.addProduct = async () => {
+            products.push({ name: "New Product", price: "0", img: "" });
+            await saveData();
+            // Scroll to bottom
+            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
+        };
+
+        window.deleteItem = async (index) => {
+            if(confirm("Delete this product permanently?")) {
+                products.splice(index, 1);
+                await saveData();
+            }
+        };
+
+        window.toggleAdminMode = () => {
+            if (isAdmin) {
+                isAdmin = false;
+            } else {
+                const input = prompt("Enter Admin Passkey:");
+                if (input === PASSKEY) isAdmin = true;
+            }
+            renderApp();
+        };
+
+        async function saveData() {
+            try {
+                await setDoc(docRef, { products: products }, { merge: true });
+            } catch (e) {
+                alert("Database Error: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

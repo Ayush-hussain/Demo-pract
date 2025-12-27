@@ -1,0 +1,223 @@
+/* --- Variables & Reset --- */
+:root {
+    --bg-color: #FAFAFA;
+    --surface: #FFFFFF;
+    --text-primary: #111111;
+    --text-secondary: #757575;
+    --accent: #25D366; /* WhatsApp Green */
+    --accent-dark: #1da851;
+    --danger: #FF3B30;
+    --border: #E5E5E5;
+    --shadow: 0 4px 20px rgba(0,0,0,0.04);
+    --font-main: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+    margin: 0;
+    font-family: var(--font-main);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    padding-bottom: 100px;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* --- Premium Header --- */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.brand {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0;
+}
+
+.mode-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: var(--text-primary);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: none;
+}
+.admin-active .mode-badge { display: block; }
+
+/* --- Grid Layout --- */
+.container {
+    max-width: 600px; /* Mobile focused max-width */
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 Column Layout */
+    gap: 12px;
+}
+
+/* --- Product Card --- */
+.card {
+    background: var(--surface);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s;
+    position: relative;
+    border: 1px solid var(--border);
+}
+
+/* Image Aspect Ratio */
+.image-box {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* Square images */
+    background: #f0f0f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.image-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s;
+}
+
+/* Card Content */
+.details {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.price-tag {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.item-name {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 2px 0 12px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Primary Action Button (WhatsApp) */
+.btn-buy {
+    background: var(--text-primary);
+    color: white;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 0;
+    border-radius: 6px;
+    text-align: center;
+    transition: background 0.2s;
+    display: block;
+}
+
+.btn-buy:active { transform: scale(0.98); opacity: 0.9; }
+
+/* --- Admin Edit Mode Styles --- */
+.admin-ui { display: none; }
+.admin-active .admin-ui { display: flex; flex-direction: column; gap: 8px; }
+.admin-active .btn-buy, .admin-active .item-name, .admin-active .price-tag { display: none; }
+
+.edit-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid var(--border);
+    background: #F8F8F8;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    outline: none;
+}
+
+.edit-input:focus { border-color: var(--text-primary); background: white; }
+
+/* Custom Upload Button */
+.upload-label {
+    background: #eef0f2;
+    color: var(--text-primary);
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    display: block;
+}
+
+.hidden-file { display: none; }
+
+.actions-row { display: flex; gap: 5px; margin-top: 5px; }
+
+.btn-action {
+    flex: 1;
+    border: none;
+    padding: 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.btn-save { background: var(--accent); color: white; }
+.btn-del { background: #ffe5e5; color: var(--danger); }
+
+/* --- Floating Add Button --- */
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 25px;
+    width: 56px;
+    height: 56px;
+    background: var(--text-primary);
+    color: white;
+    border-radius: 50%;
+    border: none;
+    font-size: 28px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+}
+.admin-active .fab { display: flex; }
+
+/* --- Footer --- */
+.footer-lock {
+    text-align: center;
+    padding: 30px;
+    font-size: 0.8rem;
+    color: #ccc;
+    cursor: pointer;
+}
+
+.loading-spinner {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
