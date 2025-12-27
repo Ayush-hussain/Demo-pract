@@ -5,25 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Rat Furniture</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <header class="header">
-        <h1 class="brand">Rat Furniture</h1>
-        <div class="mode-badge">Admin Mode</div>
-    </header>
+    <nav>
+        <div class="brand">Rat Furniture</div>
+        <div id="admin-badge" style="display:none; font-size:0.7rem; background:black; color:white; padding:4px 8px; border-radius:4px;">ADMIN</div>
+    </nav>
 
-    <div class="container">
-        <div id="product-grid" class="grid">
-            <div class="loading-spinner">Loading Collection...</div>
+    <section class="hero">
+        <h1>High-quality furniture<br>& aesthetics</h1>
+        <p>Curated minimalist pieces for the modern home. Browse our latest collection below.</p>
+        <a href="#catalog" class="hero-btn">Browse Products</a>
+    </section>
+
+    <div class="container" id="catalog">
+        <div class="section-title">Latest Collection</div>
+        
+        <div id="grid" class="grid">
+            <div class="loading">Loading Collection...</div>
         </div>
     </div>
 
-    <button class="fab" onclick="addProduct()">+</button>
-
-    <div class="footer-lock" onclick="toggleAdminMode()">
-        <span id="lock-icon">🔒 Admin Access</span>
+    <button class="fab" onclick="addItem()">+</button>
+    <div class="footer" onclick="toggleAdmin()">
+        <span id="lock-text">🔒 Admin Access</span>
     </div>
 
     <script type="module">
@@ -31,7 +38,7 @@
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
-        // --- ⬇️ PASTE YOUR NEW CONFIG HERE ⬇️ ---
+        // --- ⚠️ PASTE YOUR CONFIG HERE ⚠️ ---
         const firebaseConfig = {
             apiKey: "PASTE_HERE",
             authDomain: "PASTE_HERE",
@@ -40,157 +47,135 @@
             messagingSenderId: "PASTE_HERE",
             appId: "PASTE_HERE"
         };
-        // ----------------------------------------
+        // ------------------------------------
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
         const docRef = doc(db, "catalog", "main");
-
-        // State
+        
         let products = [];
         let isAdmin = false;
         const PASSKEY = "29876104";
 
-        // 1. Listen for Realtime Updates
         onSnapshot(docRef, (snap) => {
             if (snap.exists()) {
                 products = snap.data().products || [];
-                renderApp();
+                render();
             } else {
-                // Initialize if empty
                 products = [{ name: "Modern Chair", price: "120", img: "" }];
-                saveData();
+                save();
             }
         });
 
-        // 2. Render the UI
-        function renderApp() {
-            const grid = document.getElementById("product-grid");
-            const lockIcon = document.getElementById("lock-icon");
-            
+        function render() {
+            const grid = document.getElementById("grid");
+            const badge = document.getElementById("admin-badge");
+            const lockText = document.getElementById("lock-text");
+
             grid.innerHTML = "";
-            document.body.classList.toggle('admin-active', isAdmin);
-            lockIcon.innerText = isAdmin ? "Tap to Exit Admin" : "🔒 Admin Access";
+            document.body.classList.toggle('admin-mode', isAdmin);
+            badge.style.display = isAdmin ? 'block' : 'none';
+            lockText.innerText = isAdmin ? "Tap to Exit" : "🔒 Admin Access";
 
-            if (products.length === 0) {
-                grid.innerHTML = '<div class="loading-spinner">No items found.</div>';
-                return;
-            }
+            if (products.length === 0) grid.innerHTML = '<div class="loading">No products found.</div>';
 
-            products.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'card';
+            products.forEach((p, i) => {
+                const imgUrl = p.img || 'https://placehold.co/400x400/F3F3F3/CCCCCC?text=No+Img';
                 
-                // Fallback image if empty
-                const imgSrc = item.img ? item.img : 'https://placehold.co/400x400/F0F0F0/CCCCCC?text=No+Image';
-
-                card.innerHTML = `
-                    <div class="image-box">
-                        <img src="${imgSrc}" id="preview-${index}" loading="lazy">
+                const html = `
+                <div class="card">
+                    <div class="image-container">
+                        <img src="${imgUrl}" id="img-${i}">
                     </div>
-                    
-                    <div class="details">
-                        <div class="price-tag">$${item.price}</div>
-                        <div class="item-name">${item.name}</div>
-                        <a href="https://wa.me/?text=I'm interested in ${encodeURIComponent(item.name)}" 
-                           class="btn-buy" target="_blank">Order Now</a>
 
-                        <div class="admin-ui">
-                            <input class="edit-input" id="name-${index}" value="${item.name}" placeholder="Name">
-                            <input class="edit-input" id="price-${index}" value="${item.price}" placeholder="Price">
+                    <div class="details">
+                        <div class="view-content" ${isAdmin ? 'style="display:none"' : ''}>
+                            <span class="category-label">FURNITURE</span>
+                            <div class="item-name">${p.name}</div>
+                            <div class="item-price">$${p.price}</div>
+                            <a href="https://wa.me/?text=I'm interested in ${encodeURIComponent(p.name)}" 
+                               style="display:block; margin-top:8px; font-size:0.8rem; text-decoration:underline; color:#111;">
+                               Order via WhatsApp
+                            </a>
+                        </div>
+
+                        <div class="admin-overlay">
+                            <input class="admin-input" id="name-${i}" value="${p.name}" placeholder="Name">
+                            <input class="admin-input" id="price-${i}" value="${p.price}" placeholder="Price">
                             
-                            <label class="upload-label" id="lbl-${index}">
-                                📷 Change Photo
-                                <input type="file" class="hidden-file" accept="image/*" onchange="handleUpload(this, ${index})">
+                            <label style="font-size:0.7rem; display:block; margin-bottom:5px; color:blue;">
+                                📷 Change Image
+                                <input type="file" style="display:none" onchange="uploadFile(this, ${i})">
                             </label>
-                            
-                            <div class="actions-row">
-                                <button class="btn-action btn-save" id="save-${index}" onclick="saveItem(${index})">Save</button>
-                                <button class="btn-action btn-del" onclick="deleteItem(${index})">Delete</button>
+                            <span id="status-${i}" style="font-size:0.7rem; color:green;"></span>
+
+                            <div class="action-row">
+                                <button class="btn-act btn-save" id="save-${i}" onclick="saveItem(${i})">Save</button>
+                                <button class="btn-act btn-del" onclick="delItem(${i})">Delete</button>
                             </div>
                         </div>
                     </div>
-                `;
-                grid.appendChild(card);
+                </div>`;
+                grid.innerHTML += html;
             });
         }
 
-        // 3. Logic Functions
-        window.handleUpload = async (input, index) => {
+        window.uploadFile = async (input, index) => {
             const file = input.files[0];
             if (!file) return;
-
-            const label = document.getElementById(`lbl-${index}`);
+            const status = document.getElementById(`status-${index}`);
             const saveBtn = document.getElementById(`save-${index}`);
             
-            label.innerText = "Uploading... ⏳";
+            status.innerText = "Uploading...";
             saveBtn.disabled = true;
 
             try {
-                const storageRef = ref(storage, 'catalog/' + Date.now() + '-' + file.name);
-                await uploadBytes(storageRef, file);
-                const url = await getDownloadURL(storageRef);
+                const refLink = ref(storage, 'items/' + Date.now() + '-' + file.name);
+                await uploadBytes(refLink, file);
+                const url = await getDownloadURL(refLink);
                 
-                // Update local data temporarily for preview
-                products[index].img = url;
-                document.getElementById(`preview-${index}`).src = url;
-                
-                label.innerText = "✅ Done";
-            } catch (error) {
-                console.error(error);
-                label.innerText = "❌ Error";
-            } finally {
-                saveBtn.disabled = false;
-            }
-        };
-
-        window.saveItem = async (index) => {
-            // Update data from inputs
-            products[index].name = document.getElementById(`name-${index}`).value;
-            products[index].price = document.getElementById(`price-${index}`).value;
-            // Image is already updated in local array by handleUpload
-            
-            const btn = document.getElementById(`save-${index}`);
-            btn.innerText = "Saving...";
-            
-            await saveData();
-            
-            btn.innerText = "Saved!";
-            setTimeout(() => btn.innerText = "Save", 1500);
-        };
-
-        window.addProduct = async () => {
-            products.push({ name: "New Product", price: "0", img: "" });
-            await saveData();
-            // Scroll to bottom
-            setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 100);
-        };
-
-        window.deleteItem = async (index) => {
-            if(confirm("Delete this product permanently?")) {
-                products.splice(index, 1);
-                await saveData();
-            }
-        };
-
-        window.toggleAdminMode = () => {
-            if (isAdmin) {
-                isAdmin = false;
-            } else {
-                const input = prompt("Enter Admin Passkey:");
-                if (input === PASSKEY) isAdmin = true;
-            }
-            renderApp();
-        };
-
-        async function saveData() {
-            try {
-                await setDoc(docRef, { products: products }, { merge: true });
+                products[index].img = url; // Update data array directly
+                document.getElementById(`img-${index}`).src = url;
+                status.innerText = "Done! Click Save.";
             } catch (e) {
-                alert("Database Error: " + e.message);
+                status.innerText = "Error!";
+                console.error(e);
             }
+            saveBtn.disabled = false;
+        };
+
+        window.saveItem = async (i) => {
+            products[i].name = document.getElementById(`name-${i}`).value;
+            products[i].price = document.getElementById(`price-${i}`).value;
+            // Image is already updated in array by uploadFile
+            await save();
+            alert("Saved");
+        };
+
+        window.addItem = async () => {
+            products.push({ name: "New Item", price: "0", img: "" });
+            await save();
+        };
+
+        window.delItem = async (i) => {
+            if(confirm("Delete?")) {
+                products.splice(i, 1);
+                await save();
+            }
+        };
+
+        window.toggleAdmin = () => {
+            if(!isAdmin) {
+                if(prompt("Passkey") === PASSKEY) isAdmin = true;
+            } else {
+                isAdmin = false;
+            }
+            render();
+        };
+
+        async function save() {
+            await setDoc(docRef, { products }, { merge: true });
         }
     </script>
 </body>
